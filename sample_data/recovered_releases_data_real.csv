@@ -1,0 +1,7 @@
+user_id,release_name,artist_name,release_weight,genres,release_year
+1,Album One,Artist A,5.0,"{""rock"",""alternative rock""}",2018.0
+1,Album Two,Artist B,4.0,"{""pop"",""electropop""}",2020.0
+2,Album One,Artist A,6.0,"{""rock"",""alternative rock"",""indie rock""}",2018.0
+2,Album Three,Artist C,3.5,"{""metal"",""heavy metal""}",2015.0
+3,Album Two,Artist B,4.5,"{""pop"",""electropop""}",2020.0
+3,Album Three,Artist C,3.0,"{""metal"",""power metal""}",2015.0

@@ -1,0 +1,7 @@
+user_id,artist_name,artist_weight,genres
+1,Artist A,10.5,"{""rock"",""alternative rock"",""indie rock""}"
+1,Artist B,8.2,"{""pop"",""electropop""}"
+2,Artist A,15.0,"{""rock"",""alternative rock"",""indie rock""}"
+2,Artist C,7.0,"{""metal"",""heavy metal"",""power metal""}"
+3,Artist B,9.0,"{""pop"",""electropop"",""synth-pop""}"
+3,Artist C,6.5,"{""metal"",""heavy metal""}"

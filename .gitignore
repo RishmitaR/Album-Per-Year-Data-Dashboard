@@ -1,7 +1,7 @@
-# Data files (do not commit; use sample_data for deployed app)
-recovered_users_data_real.csv
-recovered_releases_data_real.csv
-recovered_artists_data_real.csv
+# Non-recovered CSVs (untracked)
+data/users_data_real.csv
+data/releases_data_real.csv
+data/artists_data_real.csv
 
 # Python
 __pycache__/

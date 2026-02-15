@@ -4,8 +4,9 @@ import os
 import pandas as pd
 from utils import clean_genres
 
-# Default data path - current directory (where data_loader.py lives)
-DEFAULT_DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+# Default data path - data folder in project root
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_DATA_DIR = os.path.join(_PROJECT_ROOT, "data")
 
 
 def load_data(data_dir=None):
