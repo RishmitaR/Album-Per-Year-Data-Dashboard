@@ -1,0 +1,21 @@
+# Data files (do not commit; use sample_data for deployed app)
+recovered_users_data_real.csv
+recovered_releases_data_real.csv
+recovered_artists_data_real.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Streamlit
+.streamlit/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
