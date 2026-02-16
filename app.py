@@ -73,7 +73,7 @@ artists_frame = st.session_state.artists_frame
 # --- Home Page ---
 if page == "Home":
     st.title("Home")
-    st.markdown("Before training my reccomender models for the final Album-Per-Year project I did exploratory data analysis on the dataset I created from the API calls I made to ListenBrainz. This dashboard summarizes interesting insights from that EDA and these visualizations should be helpful when modelling and evaluating the reccomender systems.")
+    st.markdown("Before training my reccomender models for the final Album-Per-Year project I did exploratory data analysis on the dataset I created from the API calls I made to ListenBrainz. This dashboard summarizes interesting insights from that EDA and these visualizations should be helpful when modelling and evaluating the reccomender systems. The original dataset had 42,000 user profiles, but I filtered out users with fewer than 1000 listens to focus on more active listeners. The data includes user artist and albums listening histories, as well as genre information for artists and albums pulled from the MusicBrainz database where available. Release Years were also included for albums.")
     st.markdown("### Overview")
 
     listens = users_frame["listen_count"]
@@ -152,7 +152,7 @@ if page == "Home":
         plt.tight_layout()
         st.pyplot(fig_alb)
         plt.close()
-
+    
     # Top artists and albums (moved to Home; global, no year filter)
     n_artists = st.slider("Top Artists to Show", min_value=5, max_value=50, value=15, key="home_artists_n")
     n_albums = st.slider("Top Albums to Show", min_value=5, max_value=50, value=15, key="home_albums_n")
@@ -177,7 +177,7 @@ if page == "Home":
         ax_a.set_facecolor('white')
         sns.barplot(data=artists_df, y="Artist", x="Count", ax=ax_a, palette=cmap_colors[: len(artists_df)])
         ax_a.set_ylabel("Artist")
-        ax_a.set_xlabel("Listens")
+        ax_a.set_xlabel("Artist Occurrences in User Histories")
         ax_a.set_title(f"Top {n_artists} Artists")
         plt.tight_layout()
         st.pyplot(fig_a)
@@ -190,12 +190,14 @@ if page == "Home":
         ax_b.set_facecolor('white')
         sns.barplot(data=albums_df, y="Album", x="Count", ax=ax_b, palette=cmap_colors[: len(albums_df)])
         ax_b.set_ylabel("Album")
-        ax_b.set_xlabel("Listens")
+        ax_b.set_xlabel("Album Occurrences in User Histories")
         ax_b.set_title(f"Top {n_albums} Albums")
         plt.tight_layout()
         st.pyplot(fig_b)
         plt.close()
 
+    st.markdown(" ### Note on Top Artists and Top Albums:")
+    st.markdown("These are the top albums and artists in the dataset based on how many times they appear in the listening histories of all users. This is not a total count of all listens of that album or artist, but rather a count of how many users have that album or artist in their listening history. Rather than keeping track of the total listens for each album or artist per user I assigned a weight to each album and artist for each user based on how much of their total listening history that album or artist made up, so this is a count of how many users had that album or artist in their history regardless of how much they listened to it. The genre analysis page also uses this same method of counting genres based on how many users had albums with that genre in their listening history. If I were to redo the ETL of this dataset I would have also saved the total listens for each album and artist per user, which would allow for more detailed analysis of the most listened to albums and artists in the dataset, but I think this method of counting how many users had an album or artist in their history is still a useful way to get a sense of the most popular albums and artists in the dataset without being skewed by a few users with very high listen counts for certain albums or artists. Whaty I've done should also be good enough for recommender system modelling and evaluation, since the proportional presence of an album or artist in a user's history is more important for training and evaluating the models than the total listens.")
 
 # --- Genre Analysis Page ---
 elif page == "Genre Analysis Per Year":
@@ -246,7 +248,9 @@ elif page == "Genre Analysis Per Year":
     heatmap_df = pd.DataFrame(genre_year_data).T
     heatmap_df.index = [format_label(g) for g in heatmap_df.index]
 
-    st.markdown("### Top Genres by Listen Counts")
+
+    st.markdown("### Top Genres by occurrence in Album Histories")
+    st.markdown("As with the top artists and albums, this counts how many times each genre appears in the album listening histories of all users in the selected year range. This is not a count of unique albums or artists with that genre, but rather a count of how many times albums with that genre were listened to across all users.")
     fig1, ax1 = plt.subplots(figsize=(10, max(6, n_genres * 0.55)))
     fig1.patch.set_facecolor('white')
     ax1.set_facecolor('white')
@@ -260,7 +264,7 @@ elif page == "Genre Analysis Per Year":
         palette=cmap_colors[: len(genre_count_df)],
     )
     ax1.set_ylabel("Genre")
-    ax1.set_xlabel("Listens")
+    ax1.set_xlabel("Genre Occurrences in Album Histories")
     ax1.set_title(f"Top {n_genres} Genres ({start_year}–{end_year})")
     plt.tight_layout()
     st.pyplot(fig1)
@@ -287,7 +291,7 @@ elif page == "Genre Analysis Per Year":
 # --- Genre Networks Page ---
 elif page == "Genre Networks":
     st.title("Genre Networks")
-    st.markdown("Genre co-occurrence networks by community (Louvain).")
+    st.markdown("Genre co-occurrence networks by Louvian communities. Genres are connected if they co-occur in the same album, with edge weight based on how many albums had that genre pair. Louvain communities are detected and the strongest genre in each community is highlighted in red. The bar graph shows the most common genre co-occurrences within that community.")
 
     try:
         import community as community_louvain
@@ -435,3 +439,6 @@ elif page == "Genre Networks":
             plt.tight_layout()
             st.pyplot(fig_bar)
             plt.close()
+    st.markdown("### Note on Genre Networks:")
+    st.markdown("I did this part of the EDA purely out of curiosity, and I'm not sure how useful it will be for the reccomender. Maybe this is something that will be done under the hood while training? This network and louvian communities might be helpful to reccomend albums that match nicher genre occurances that occur in this dataset but dont have listens in the ListenBrainz dataset.")
+
