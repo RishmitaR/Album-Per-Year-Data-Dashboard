@@ -51,7 +51,7 @@ def init_session():
 
 
 # Sidebar navigation
-st.sidebar.title("Music Listening EDA")
+st.sidebar.title("ListenBrainz Dataset EDA")
 page = st.sidebar.radio(
     "Navigate",
     ["Home", "Genre Analysis Per Year", "Genre Networks"],
@@ -72,7 +72,8 @@ artists_frame = st.session_state.artists_frame
 
 # --- Home Page ---
 if page == "Home":
-    st.title("Home - Summary Statistics")
+    st.title("Home")
+    st.markdown("Before training my reccomender models for the final Album-Per-Year project I did exploratory data analysis on the dataset I created from the API calls I made to ListenBrainz. This dashboard summarizes interesting insights from that EDA and these visualizations should be helpful when modelling and evaluating the reccomender systems.")
     st.markdown("### Overview")
 
     listens = users_frame["listen_count"]
