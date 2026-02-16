@@ -86,8 +86,8 @@ if page == "Home":
 
     col1, col2, col3, col4, col5 = st.columns(5)
     col1.metric("Total Users", f"{len(users_frame):,}")
-    col2.metric("Total Artist Records", f"{len(artists_frame):,}")
-    col3.metric("Total Albums Records", f"{len(albums_frame):,}")
+    col2.metric("Number of Artists in Database", f"{artists_frame["artist_name"].nunique():,}")
+    col3.metric("Number of Albums in Database", f"{albums_frame["release_name"].nunique():,}")
     col4.metric("Mean Song Listens", f"{mean:,.0f}")
     col5.metric("Median Song Listens", f"{int(median):,}")
 
@@ -107,7 +107,7 @@ if page == "Home":
     ax.text(lower_whisker, y + 0.12, f"Min*: {int(lower_whisker)}", ha="center")
     ax.text(upper_whisker, y + 0.12, f"Max*: {int(upper_whisker)}", ha="center")
     ax.text(upper_whisker, y - 0.22, f"Absolute Max*: {int(np.max(listens))}", ha="center")
-    padding = 0.08 * (upper_whisker - lower_whisker)
+    padding = 0.05 * (upper_whisker - lower_whisker)
     ax.set_xlim(left=lower_whisker - padding, right=upper_whisker + padding)
     ax.set_xlabel("Song Listens")
     ax.set_title("Distribution of Song Listens")
@@ -115,7 +115,7 @@ if page == "Home":
     plt.close()
 
     # Distribution of album release years (one entry per unique album)
-    st.markdown("### Distribution of Album Release Years (per unique album)")
+    st.markdown("### Distribution of Album Release Years")
     albums_unique = albums_frame.drop_duplicates(subset=["release_name", "artist_name"]).copy()
     album_years = albums_unique["release_year"].dropna().astype(int)
     if len(album_years) > 0:
@@ -141,10 +141,10 @@ if page == "Home":
         ax_alb.text(median_a, y_a - 0.05, f"Median: {int(median_a)}", ha="center")
         ax_alb.text(q3_a, y_a - 0.18, f"Q3: {int(q3_a)}", ha="center")
         ax_alb.text(lower_whisker_a, y_a + 0.12, f"Min*: {int(lower_whisker_a)}", ha="center")
+        ax_alb.text(lower_whisker_a, y_a - 0.22, f"Absolute Min*: {int(np.min(album_years))}", ha="center")
         ax_alb.text(upper_whisker_a, y_a + 0.12, f"Max*: {int(upper_whisker_a)}", ha="center")
         ax_alb.text(upper_whisker_a, y_a - 0.22, f"Absolute Max*: {int(np.max(album_years))}", ha="center")
-        ax.text(lower_whisker, y - 0.22, f"Absolute Min*: {int(np.min(album_years))}", ha="center")
-        padding_a = 0.05 * (upper_whisker_a - lower_whisker_a) if upper_whisker_a != lower_whisker_a else 5
+        padding_a = 0.25 * (upper_whisker_a - lower_whisker_a) if upper_whisker_a != lower_whisker_a else 5
         ax_alb.set_xlim(left=lower_whisker_a - padding_a, right=upper_whisker_a + padding_a)
         ax_alb.set_xlabel("Release Year")
         ax_alb.set_title("Distribution of Album Release Years (per unique album)")
@@ -153,8 +153,8 @@ if page == "Home":
         plt.close()
 
     # Top artists and albums (moved to Home; global, no year filter)
-    n_artists = st.slider("Top N Artists to Show", min_value=5, max_value=50, value=15, key="home_artists_n")
-    n_albums = st.slider("Top N Albums to Show", min_value=5, max_value=50, value=15, key="home_albums_n")
+    n_artists = st.slider("Top Artists to Show", min_value=5, max_value=50, value=15, key="home_artists_n")
+    n_albums = st.slider("Top Albums to Show", min_value=5, max_value=50, value=15, key="home_albums_n")
 
     # prepare palettes
     cmap = plt.cm.get_cmap("tab20c")
@@ -176,8 +176,8 @@ if page == "Home":
         ax_a.set_facecolor('white')
         sns.barplot(data=artists_df, y="Artist", x="Count", ax=ax_a, palette=cmap_colors[: len(artists_df)])
         ax_a.set_ylabel("Artist")
-        ax_a.set_xlabel("Count")
-        ax_a.set_title(f"Top {n_artists} Artists (All Years)")
+        ax_a.set_xlabel("Listens")
+        ax_a.set_title(f"Top {n_artists} Artists")
         plt.tight_layout()
         st.pyplot(fig_a)
         plt.close()
@@ -189,8 +189,8 @@ if page == "Home":
         ax_b.set_facecolor('white')
         sns.barplot(data=albums_df, y="Album", x="Count", ax=ax_b, palette=cmap_colors[: len(albums_df)])
         ax_b.set_ylabel("Album")
-        ax_b.set_xlabel("Count")
-        ax_b.set_title(f"Top {n_albums} Albums (All Years)")
+        ax_b.set_xlabel("Listens")
+        ax_b.set_title(f"Top {n_albums} Albums")
         plt.tight_layout()
         st.pyplot(fig_b)
         plt.close()
@@ -219,8 +219,9 @@ elif page == "Genre Analysis Per Year":
 
     # Aggregate genre counts for the year range
     genre_dict = {}
-    for col in filtered["genres"]:
-        for genre in col:
+    genres = albums_frame["genres"]
+    for row in genres:
+        for genre in row:
             genre_dict[genre] = genre_dict.get(genre, 0) + 1
 
     genre_count_df = (
@@ -233,20 +234,19 @@ elif page == "Genre Analysis Per Year":
     # Genre counts per year for heatmap
     years = list(range(start_year, end_year + 1))
     genre_year_data = {}
+
     for g in genre_count_df["Genre"].tolist():
         genre_year_data[g] = {}
         for y in years:
             year_df = filtered[filtered["release_year"] == y]
-            count = 0
-            for col in year_df["genres"]:
-                count += col.count(g) if g in col else 0
+            count = year_df["genres"].apply(lambda genres: g in genres).sum()
             genre_year_data[g][y] = count
 
     heatmap_df = pd.DataFrame(genre_year_data).T
     heatmap_df.index = [format_label(g) for g in heatmap_df.index]
 
-    st.markdown("### Top Genres by Total Count (Horizontal Bar)")
-    fig1, ax1 = plt.subplots(figsize=(10, max(6, n_genres * 0.35)))
+    st.markdown("### Top Genres by Listen Counts")
+    fig1, ax1 = plt.subplots(figsize=(10, max(6, n_genres * 0.55)))
     fig1.patch.set_facecolor('white')
     ax1.set_facecolor('white')
     cmap = plt.cm.get_cmap("tab20c")
@@ -259,7 +259,7 @@ elif page == "Genre Analysis Per Year":
         palette=cmap_colors[: len(genre_count_df)],
     )
     ax1.set_ylabel("Genre")
-    ax1.set_xlabel("Count")
+    ax1.set_xlabel("Listens")
     ax1.set_title(f"Top {n_genres} Genres ({start_year}–{end_year})")
     plt.tight_layout()
     st.pyplot(fig1)
@@ -271,7 +271,7 @@ elif page == "Genre Analysis Per Year":
     fig2_height = max(8, n_genres * 0.6, len(years) * 0.25)
     fig2, ax2 = plt.subplots(figsize=(fig2_width, fig2_height))
     sns.heatmap(heatmap_df, ax=ax2, cmap="YlOrRd", annot=False, fmt="d")
-    ax2.set_title(f"Genre Counts per Year ({start_year}–{end_year})")
+    ax2.set_title(f"Genre Listens per Year ({start_year}–{end_year})")
     ax2.set_xlabel("Year")
     ax2.set_ylabel("Genre")
     plt.tight_layout()
