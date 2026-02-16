@@ -440,5 +440,5 @@ elif page == "Genre Networks":
             st.pyplot(fig_bar)
             plt.close()
     st.markdown("### Note on Genre Networks:")
-    st.markdown("I did this part of the EDA purely out of curiosity, and I'm not sure how useful it will be for the reccomender. Maybe this is something that will be done under the hood while training? This network and louvian communities might be helpful to reccomend albums that match nicher genre occurances that occur in this dataset but dont have listens in the ListenBrainz dataset.")
+    st.markdown("I did this part of the EDA purely out of curiosity, and I'm not sure how useful it will be for the reccomender. Maybe this is something that will be done under the hood while training? This network and louvian communities might be helpful to reccomend albums from external databases that match nicher genre occurances that occur in this dataset but dont have listens in the ListenBrainz dataset.")
 
