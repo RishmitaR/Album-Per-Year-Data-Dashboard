@@ -5,7 +5,7 @@ import pandas as pd
 from utils import clean_genres
 
 # Default data path - data folder in project root
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 DEFAULT_DATA_DIR = os.path.join(_PROJECT_ROOT, "data")
 
 
@@ -20,13 +20,15 @@ def load_data(data_dir=None):
     albums_frame = pd.read_csv(releases_path)
     artists_frame = pd.read_csv(artists_path)
 
+    # Apply clean_genres to genres columns for all frames
+
     artists_frame["genres_list"] = artists_frame["genres"].apply(clean_genres)
     albums_frame["genres_list"] = albums_frame["genres"].apply(clean_genres)
 
     artists_with_genres = artists_frame[artists_frame["genres_list"].apply(lambda x: len(x) > 0)]
     albums_with_genres = albums_frame[albums_frame["genres_list"].apply(lambda x: len(x) > 0)]
 
-    final_artists_df = (
+    artists_frame = (
         artists_with_genres.groupby(["user_id", "artist_name"], as_index=False)
         .agg(
             weight=("artist_weight", "max"),
@@ -34,7 +36,7 @@ def load_data(data_dir=None):
         )
     )
 
-    final_albums_df = (
+    albums_frame = (
         albums_with_genres.groupby(
             ["user_id", "release_name", "artist_name", "release_year"], as_index=False
         )
@@ -44,4 +46,4 @@ def load_data(data_dir=None):
         )
     )
 
-    return users_frame, albums_frame, artists_frame, final_artists_df, final_albums_df
+    return users_frame, albums_frame, artists_frame

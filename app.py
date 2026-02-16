@@ -17,7 +17,7 @@ import plotly.graph_objects as go
 from matplotlib.colors import to_hex
 
 from data_loader import load_data, DEFAULT_DATA_DIR
-from utils import clean_genres, format_label
+from utils import format_label
 
 # Page config
 st.set_page_config(page_title="Music Listening EDA", layout="wide", initial_sidebar_state="expanded")
@@ -26,7 +26,7 @@ st.set_page_config(page_title="Music Listening EDA", layout="wide", initial_side
 @st.cache_data
 def get_data():
     data_dir = os.environ.get("DATA_DIR", DEFAULT_DATA_DIR)
-    if not os.path.exists(os.path.join(data_dir, "users_data_real.csv")):
+    if not os.path.exists(os.path.join(data_dir, "recovered_users_data_real.csv")):
         st.error(
             f"Data files not found in {data_dir}. "
             "Place users_data_real.csv, releases_data_real.csv, artists_data_real.csv there, "
@@ -44,8 +44,6 @@ def init_session():
                 st.session_state.users_frame,
                 st.session_state.albums_frame,
                 st.session_state.artists_frame,
-                st.session_state.final_artists_df,
-                st.session_state.final_albums_df,
             ) = result
             st.session_state.data_loaded = True
         else:
@@ -56,7 +54,7 @@ def init_session():
 st.sidebar.title("Music Listening EDA")
 page = st.sidebar.radio(
     "Navigate",
-    ["Home", "Genre Analysis", "Artists and Albums", "Genre Networks"],
+    ["Home", "Genre Analysis Per Year", "Genre Networks"],
     label_visibility="collapsed",
 )
 
@@ -69,8 +67,7 @@ if not st.session_state.get("data_loaded", False):
 users_frame = st.session_state.users_frame
 albums_frame = st.session_state.albums_frame
 artists_frame = st.session_state.artists_frame
-final_artists_df = st.session_state.final_artists_df
-final_albums_df = st.session_state.final_albums_df
+
 
 
 # --- Home Page ---
@@ -90,7 +87,7 @@ if page == "Home":
     col1, col2, col3, col4, col5 = st.columns(5)
     col1.metric("Total Users", f"{len(users_frame):,}")
     col2.metric("Total Artist Records", f"{len(artists_frame):,}")
-    col3.metric("Total Album Records", f"{len(albums_frame):,}")
+    col3.metric("Total Albums Records", f"{len(albums_frame):,}")
     col4.metric("Mean Song Listens", f"{mean:,.0f}")
     col5.metric("Median Song Listens", f"{int(median):,}")
 
@@ -110,22 +107,107 @@ if page == "Home":
     ax.text(lower_whisker, y + 0.12, f"Min*: {int(lower_whisker)}", ha="center")
     ax.text(upper_whisker, y + 0.12, f"Max*: {int(upper_whisker)}", ha="center")
     ax.text(upper_whisker, y - 0.22, f"Absolute Max*: {int(np.max(listens))}", ha="center")
-    padding = 0.05 * (upper_whisker - lower_whisker)
+    padding = 0.08 * (upper_whisker - lower_whisker)
     ax.set_xlim(left=lower_whisker - padding, right=upper_whisker + padding)
     ax.set_xlabel("Song Listens")
     ax.set_title("Distribution of Song Listens")
     st.pyplot(fig)
     plt.close()
 
+    # Distribution of album release years (one entry per unique album)
+    st.markdown("### Distribution of Album Release Years (per unique album)")
+    albums_unique = albums_frame.drop_duplicates(subset=["release_name", "artist_name"]).copy()
+    album_years = albums_unique["release_year"].dropna().astype(int)
+    if len(album_years) > 0:
+        fig_alb, ax_alb = plt.subplots(figsize=(14, 4))
+        fig_alb.patch.set_facecolor('white')
+        ax_alb.set_facecolor('white')
+        sns.boxplot(
+            x=album_years,
+            ax=ax_alb,
+            showmeans=True,
+            meanprops=dict(marker="o", markerfacecolor="red", markeredgecolor="black"),
+        )
+        mean_a = np.mean(album_years)
+        q1_a = np.percentile(album_years, 25)
+        median_a = np.median(album_years)
+        q3_a = np.percentile(album_years, 75)
+        iqr_a = q3_a - q1_a
+        lower_whisker_a = album_years[album_years >= q1_a - 1.5 * iqr_a].min()
+        upper_whisker_a = album_years[album_years <= q3_a + 1.5 * iqr_a].max()
+        y_a = 0
+        ax_alb.text(mean_a, y_a + 0.12, f"Mean: {mean_a:.0f}", ha="center", color="red")
+        ax_alb.text(q1_a, y_a - 0.18, f"Q1: {int(q1_a)}", ha="center")
+        ax_alb.text(median_a, y_a - 0.05, f"Median: {int(median_a)}", ha="center")
+        ax_alb.text(q3_a, y_a - 0.18, f"Q3: {int(q3_a)}", ha="center")
+        ax_alb.text(lower_whisker_a, y_a + 0.12, f"Min*: {int(lower_whisker_a)}", ha="center")
+        ax_alb.text(upper_whisker_a, y_a + 0.12, f"Max*: {int(upper_whisker_a)}", ha="center")
+        ax_alb.text(upper_whisker_a, y_a - 0.22, f"Absolute Max*: {int(np.max(album_years))}", ha="center")
+        ax.text(lower_whisker, y - 0.22, f"Absolute Min*: {int(np.min(album_years))}", ha="center")
+        padding_a = 0.05 * (upper_whisker_a - lower_whisker_a) if upper_whisker_a != lower_whisker_a else 5
+        ax_alb.set_xlim(left=lower_whisker_a - padding_a, right=upper_whisker_a + padding_a)
+        ax_alb.set_xlabel("Release Year")
+        ax_alb.set_title("Distribution of Album Release Years (per unique album)")
+        plt.tight_layout()
+        st.pyplot(fig_alb)
+        plt.close()
+
+    # Top artists and albums (moved to Home; global, no year filter)
+    n_artists = st.slider("Top N Artists to Show", min_value=5, max_value=50, value=15, key="home_artists_n")
+    n_albums = st.slider("Top N Albums to Show", min_value=5, max_value=50, value=15, key="home_albums_n")
+
+    # prepare palettes
+    cmap = plt.cm.get_cmap("tab20c")
+    cmap_colors = [to_hex(cmap(i)) for i in range(cmap.N)]
+
+    top_artists = artists_frame["artist_name"].value_counts().head(n_artists)
+    top_albums = albums_frame["release_name"].value_counts().head(n_albums)
+
+    artists_df = top_artists.reset_index()
+    artists_df.columns = ["Artist", "Count"]
+    albums_df = top_albums.reset_index()
+    albums_df.columns = ["Album", "Count"]
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("### Top Artists")
+        fig_a, ax_a = plt.subplots(figsize=(8, max(5, n_artists * 0.4)))
+        fig_a.patch.set_facecolor('white')
+        ax_a.set_facecolor('white')
+        sns.barplot(data=artists_df, y="Artist", x="Count", ax=ax_a, palette=cmap_colors[: len(artists_df)])
+        ax_a.set_ylabel("Artist")
+        ax_a.set_xlabel("Count")
+        ax_a.set_title(f"Top {n_artists} Artists (All Years)")
+        plt.tight_layout()
+        st.pyplot(fig_a)
+        plt.close()
+
+    with col2:
+        st.markdown("### Top Albums")
+        fig_b, ax_b = plt.subplots(figsize=(8, max(5, n_albums * 0.4)))
+        fig_b.patch.set_facecolor('white')
+        ax_b.set_facecolor('white')
+        sns.barplot(data=albums_df, y="Album", x="Count", ax=ax_b, palette=cmap_colors[: len(albums_df)])
+        ax_b.set_ylabel("Album")
+        ax_b.set_xlabel("Count")
+        ax_b.set_title(f"Top {n_albums} Albums (All Years)")
+        plt.tight_layout()
+        st.pyplot(fig_b)
+        plt.close()
+
 
 # --- Genre Analysis Page ---
-elif page == "Genre Analysis":
-    st.title("Genre Analysis")
+elif page == "Genre Analysis Per Year":
+    st.title("Genre Analysis Per Year")
     st.markdown("Explore genre popularity by year range.")
 
-    year_min = int(final_albums_df["release_year"].min())
-    year_max = int(final_albums_df["release_year"].max())
-    start_year = st.number_input("Starting Year", min_value=year_min, max_value=year_max, value=year_min)
+    year_min = int(albums_frame["release_year"].min())
+    year_max = int(albums_frame["release_year"].max())
+    # default starting year should be 1960 if data allows
+    start_default = max(year_min, 1975)
+    start_year = st.number_input(
+        "Starting Year", min_value=year_min, max_value=year_max, value=start_default
+    )
     end_year = st.number_input("Ending Year", min_value=year_min, max_value=year_max, value=year_max)
     n_genres = st.slider("Number of Genres to Show", min_value=5, max_value=50, value=20)
 
@@ -133,7 +215,7 @@ elif page == "Genre Analysis":
         st.error("Starting year must be less than or equal to ending year.")
         st.stop()
 
-    filtered = final_albums_df.query("release_year >= @start_year and release_year <= @end_year")
+    filtered = albums_frame.query("release_year >= @start_year and release_year <= @end_year")
 
     # Aggregate genre counts for the year range
     genre_dict = {}
@@ -165,12 +247,16 @@ elif page == "Genre Analysis":
 
     st.markdown("### Top Genres by Total Count (Horizontal Bar)")
     fig1, ax1 = plt.subplots(figsize=(10, max(6, n_genres * 0.35)))
+    fig1.patch.set_facecolor('white')
+    ax1.set_facecolor('white')
+    cmap = plt.cm.get_cmap("tab20c")
+    cmap_colors = [to_hex(cmap(i)) for i in range(cmap.N)]
     sns.barplot(
         data=genre_count_df,
         y="Genre Display",
         x="Count",
         ax=ax1,
-        palette="viridis",
+        palette=cmap_colors[: len(genre_count_df)],
     )
     ax1.set_ylabel("Genre")
     ax1.set_xlabel("Count")
@@ -180,7 +266,10 @@ elif page == "Genre Analysis":
     plt.close()
 
     st.markdown("### Genre Presence by Year (Heatmap)")
-    fig2, ax2 = plt.subplots(figsize=(max(10, len(years) * 0.5), max(6, n_genres * 0.35)))
+    # make heatmap larger for wide year ranges; increase vertical size with number of years
+    fig2_width = max(12, len(years) * 0.6)
+    fig2_height = max(8, n_genres * 0.6, len(years) * 0.25)
+    fig2, ax2 = plt.subplots(figsize=(fig2_width, fig2_height))
     sns.heatmap(heatmap_df, ax=ax2, cmap="YlOrRd", annot=False, fmt="d")
     ax2.set_title(f"Genre Counts per Year ({start_year}–{end_year})")
     ax2.set_xlabel("Year")
@@ -191,56 +280,7 @@ elif page == "Genre Analysis":
 
 
 # --- Artists and Albums Page ---
-elif page == "Artists and Albums":
-    st.title("Artists and Albums")
-    st.markdown("Most popular artists and albums by year range.")
-
-    year_min = int(final_albums_df["release_year"].min())
-    year_max = int(final_albums_df["release_year"].max())
-    start_year = st.number_input("Starting Year", min_value=year_min, max_value=year_max, value=year_min, key="aa_start")
-    end_year = st.number_input("Ending Year", min_value=year_min, max_value=year_max, value=year_max, key="aa_end")
-    n_top = st.slider("Top N to Show", min_value=5, max_value=50, value=15, key="aa_n")
-
-    if start_year > end_year:
-        st.error("Starting year must be less than or equal to ending year.")
-        st.stop()
-
-    filtered_albums = final_albums_df.query("release_year >= @start_year and release_year <= @end_year")
-    user_ids_in_range = set(
-        filtered_albums["user_id"].unique()
-    )
-    filtered_artists = final_artists_df[final_artists_df["user_id"].isin(user_ids_in_range)]
-
-    top_artists = filtered_artists["artist_name"].value_counts().head(n_top)
-    top_albums = filtered_albums["release_name"].value_counts().head(n_top)
-
-    artists_df = top_artists.reset_index()
-    artists_df.columns = ["Artist", "Count"]
-    albums_df = top_albums.reset_index()
-    albums_df.columns = ["Album", "Count"]
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("### Top Artists")
-        fig1, ax1 = plt.subplots(figsize=(8, max(5, n_top * 0.4)))
-        sns.barplot(data=artists_df, y="Artist", x="Count", ax=ax1, palette="Blues_r")
-        ax1.set_ylabel("Artist")
-        ax1.set_xlabel("Count")
-        ax1.set_title(f"Top {n_top} Artists ({start_year}–{end_year})")
-        plt.tight_layout()
-        st.pyplot(fig1)
-        plt.close()
-
-    with col2:
-        st.markdown("### Top Albums")
-        fig2, ax2 = plt.subplots(figsize=(8, max(5, n_top * 0.4)))
-        sns.barplot(data=albums_df, y="Album", x="Count", ax=ax2, palette="Greens_r")
-        ax2.set_ylabel("Album")
-        ax2.set_xlabel("Count")
-        ax2.set_title(f"Top {n_top} Albums ({start_year}–{end_year})")
-        plt.tight_layout()
-        st.pyplot(fig2)
-        plt.close()
+# Note: the previous "Artists and Albums" page was moved to Home and removed.
 
 
 # --- Genre Networks Page ---
@@ -259,7 +299,7 @@ elif page == "Genre Networks":
     @st.cache_data
     def build_genre_network():
         pairs = Counter()
-        for _artist_name, group in final_artists_df.groupby("artist_name"):
+        for _artist_name, group in artists_frame.groupby("artist_name"):
             genres = group["genres"].iloc[0]
             for g1, g2 in combinations(sorted(genres), 2):
                 pairs[(g1, g2)] += 1
@@ -383,7 +423,11 @@ elif page == "Genre Networks":
         if top_pairs:
             pair_df = pd.DataFrame(top_pairs, columns=["Genre Pair", "Count"])
             fig_bar, ax_bar = plt.subplots(figsize=(10, 4))
-            sns.barplot(data=pair_df, y="Genre Pair", x="Count", ax=ax_bar, palette="rocket")
+            fig_bar.patch.set_facecolor('white')
+            ax_bar.set_facecolor('white')
+            cmap = plt.cm.get_cmap("tab20c")
+            cmap_colors = [to_hex(cmap(i)) for i in range(cmap.N)]
+            sns.barplot(data=pair_df, y="Genre Pair", x="Count", ax=ax_bar, palette=cmap_colors[: len(pair_df)])
             ax_bar.set_title(f"Top Genre Co-occurrences – {format_label(strongest)}")
             ax_bar.set_ylabel("Genre Pair")
             ax_bar.set_xlabel("Co-occurrence Count")
