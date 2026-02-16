@@ -73,7 +73,7 @@ artists_frame = st.session_state.artists_frame
 # --- Home Page ---
 if page == "Home":
     st.title("Home")
-    st.markdown("Before training my reccomender models for the final Album-Per-Year project I did exploratory data analysis on the dataset I created from the API calls I made to ListenBrainz. This dashboard summarizes interesting insights from that EDA and these visualizations should be helpful when modelling and evaluating the reccomender systems. The original dataset had 42,000 user profiles, but I filtered out users with fewer than 1000 listens to focus on more active listeners. The data includes user artist and albums listening histories, as well as genre information for artists and albums pulled from the MusicBrainz database where available. Release Years were also included for albums.")
+    st.markdown("Before training my reccomender models for the final [Album-Per-Year project](https://github.com/RishmitaR/Album-Per-Year) I did exploratory data analysis on the dataset I created from the API calls I made to ListenBrainz. This dashboard summarizes interesting insights from that EDA and these visualizations should be helpful when modelling the reccomender systems. The original dataset had 42,000 user profiles, but I filtered out users with fewer than 1000 listens to focus on more active listeners. The data includes user artist and albums listening histories, as well as genre information for artists and albums pulled from the MusicBrainz database where available. Release Years were also included for albums.")
     st.markdown("### Overview")
 
     listens = users_frame["listen_count"]
