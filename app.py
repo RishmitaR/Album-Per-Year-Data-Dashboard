@@ -22,6 +22,7 @@ from utils import format_label
 # Page config
 st.set_page_config(page_title="Music Listening EDA", layout="wide", initial_sidebar_state="expanded")
 
+
 # Load data with caching
 @st.cache_data
 def get_data():
